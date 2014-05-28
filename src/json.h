@@ -2,7 +2,7 @@
 #define JSON_H
 
 typedef enum {
-    JSON_STRING,
+    JSON_STRING = 0x100,
     JSON_NUMBER,
     JSON_OBJECT,
     JSON_ARRAY,

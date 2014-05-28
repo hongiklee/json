@@ -64,7 +64,7 @@ typedef struct json_null_t {
 #define json_is_false(j)    (j && j->type == JSON_FALSE)
 #define json_is_null(j)     (j && j->type == JSON_NULL)
 
-#define MIN_DUMP_SIZE   102400
+#define MIN_DUMP_SIZE   100
 
 int json_destroy(json_t *json)
 {
@@ -84,9 +84,6 @@ int json_destroy(json_t *json)
                 struct json_object_value_t *current;
                 struct json_object_value_t *next;
 
-                if ( ! json_is_object(json))
-                    return 1;
-
                 current = ((json_object_t *)json)->first;
                 while (current) {
                     next = current->next;
@@ -103,14 +100,8 @@ int json_destroy(json_t *json)
                 struct json_array_value_t *current;
                 struct json_array_value_t *next;
 
-                if ( ! json_is_array(json))
-                    return 1;
-
                 current = ((json_array_t *)json)->first;
                 while (current) {
-                    if (current == NULL)
-                        break;
-
                     next = current->next;
                     json_destroy(current->value);
                     free(current);
@@ -451,7 +442,7 @@ static int append_string(const char *src, int len, char **dst, int *size)
     return len;
 }
 
-static int dump(json_t *json, char *buf, int *size)
+static int dump(json_t *json, char **buf, int *size)
 {
     int i;
     int len;
@@ -469,7 +460,7 @@ static int dump(json_t *json, char *buf, int *size)
                 if ( ! tmp)
                     return 1;
                 len = sprintf(tmp, "\"%s\"", value);
-                append_string(tmp, len, &buf, size);
+                append_string(tmp, len, buf, size);
                 free(tmp);
             }
             break;
@@ -478,7 +469,7 @@ static int dump(json_t *json, char *buf, int *size)
                 char tmp[32] = {0, };
                 long double value = json_number_get(json);
                 len = sprintf(tmp, "%.17Lg", value);
-                append_string(tmp, len, &buf, size);
+                append_string(tmp, len, buf, size);
             }
             break;
         case JSON_OBJECT:
@@ -488,7 +479,7 @@ static int dump(json_t *json, char *buf, int *size)
 
                 obj_size = json_object_sizeof(json);
 
-                append_string("{", 1, &buf, size);
+                append_string("{", 1, buf, size);
                 for (i = 0; i < obj_size; i++) {
                     key = json_object_get_key(json, i);
                     if ( ! key)
@@ -497,13 +488,13 @@ static int dump(json_t *json, char *buf, int *size)
                     if ( ! j)
                         continue;
 
-                    append_string(key, strlen(key), &buf, size);
-                    append_string(":", 1, &buf, size);
+                    append_string(key, strlen(key), buf, size);
+                    append_string(":", 1, buf, size);
                     dump(j, buf, size);
                     if (i + 1 < obj_size)
-                        append_string(", ", 2, &buf, size);
+                        append_string(", ", 2, buf, size);
                 }
-                append_string("}", 1, &buf, size);
+                append_string("}", 1, buf, size);
             }
             break;
         case JSON_ARRAY:
@@ -512,7 +503,7 @@ static int dump(json_t *json, char *buf, int *size)
 
                 array_size = json_array_sizeof(json);
 
-                append_string("[", 1, &buf, size);
+                append_string("[", 1, buf, size);
                 for (i = 0; i < array_size; i++) {
                     json_t *j = json_array_get(json, i);
                     if ( ! j)
@@ -520,19 +511,19 @@ static int dump(json_t *json, char *buf, int *size)
 
                     dump(j, buf, size);
                     if (i + 1 < array_size)
-                        append_string(", ", 2, &buf, size);
+                        append_string(", ", 2, buf, size);
                 }
-                append_string("]", 1, &buf, size);
+                append_string("]", 1, buf, size);
             }
             break;
         case JSON_TRUE:
-            append_string("true", 4, &buf, size);
+            append_string("true", 4, buf, size);
             break;
         case JSON_FALSE:
-            append_string("false", 5, &buf, size);
+            append_string("false", 5, buf, size);
             break;
         case JSON_NULL:
-            append_string("null", 4, &buf, size);
+            append_string("null", 4, buf, size);
             break;
     }
 
@@ -547,7 +538,7 @@ char *json_dump(json_t *json)
         return NULL;
     output[0] = '\0';
 
-    dump(json, output, &size);
+    dump(json, &output, &size);
 
     return output;
 }
@@ -603,12 +594,13 @@ json_t *json_parse(const char *data, int len)
         quotation = bracket = brace = done = 0;
         if (data[start] == '[')
             root = json_array();
-        else
+        else if (data[start] == '{')
             root = json_object();
+        else
+            goto error;
 
         done = start + 1;
         for (i = done; i < len; i++) {
-            //printf("%c %d %d %d %d '%.*s'\n", data[i], quotation, bracket, brace, done, done, data);
             if (data[i] == '"') {
                 quotation = ! quotation;
             }
@@ -636,13 +628,15 @@ json_t *json_parse(const char *data, int len)
                 if (data[start] == '[' && ! bracket && ! brace) {
                     //printf("[%.*s]\n", i - done, &data[done]);
                     child = json_parse(&data[done], i - done);
-                    json_array_set(root, child);
+                    if (child)
+                        json_array_set(root, child);
                     done = i;
                 } else if (data[start] == '{' && ! bracket && ! brace) {
                     if (key) {
                         //printf("key %s {%.*s}\n", key, i - done, &data[done]);
                         child = json_parse(&data[done], i - done);
-                        json_object_set(root, key, child);
+                        if (child)
+                            json_object_set(root, key, child);
                         free(key);
                     }
                     done = i;
