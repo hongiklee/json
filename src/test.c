@@ -50,7 +50,6 @@ int main(int argc, char **argv)
     dumps = json_dump(obj);
     printf("Object : %s\n", dumps);
     free(dumps);
-    json_destroy(arr);
     json_destroy(obj);
 
     // parding test

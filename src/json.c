@@ -64,7 +64,7 @@ typedef struct json_null_t {
 #define json_is_false(j)    (j && j->type == JSON_FALSE)
 #define json_is_null(j)     (j && j->type == JSON_NULL)
 
-#define MIN_DUMP_SIZE   100
+#define MIN_DUMP_SIZE   1024
 
 int json_destroy(json_t *json)
 {
