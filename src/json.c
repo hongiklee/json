@@ -601,7 +601,7 @@ json_t *json_parse(const char *data, int len)
 
         done = start + 1;
         for (i = done; i < len; i++) {
-            if (data[i] == '"') {
+            if (data[i - 1] != '\\' && data[i] == '"') {
                 quotation = ! quotation;
             }
             if (quotation)
