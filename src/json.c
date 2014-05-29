@@ -652,6 +652,14 @@ json_t *json_parse(const char *data, int len)
             }
         }
 
+        if (data[start] == '[')
+            bracket++;
+        if (data[start] == '{')
+            brace++;
+
+        if (bracket || brace)
+            goto error;
+
         return root;
     } else if (len - start >= 4 && ! strncasecmp(data + start, "true", 4)) {
         return json_true();
