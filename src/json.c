@@ -638,6 +638,9 @@ json_t *json_parse(const char *data, int len)
                         if (child)
                             json_object_set(root, key, child);
                         free(key);
+                        key = NULL;
+                    } else {
+                        goto error;
                     }
                     done = i;
                 }
