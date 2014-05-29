@@ -666,7 +666,7 @@ json_t *json_parse(const char *data, int len)
         return root;
     } else if (len - start >= 4 && ! strncasecmp(data + start, "true", 4)) {
         return json_true();
-    } else if (len - start >= 5 && ! strncasecmp(data + start, "false", 4)) {
+    } else if (len - start >= 5 && ! strncasecmp(data + start, "false", 5)) {
         return json_false();
     } else if (len - start >= 4 && ! strncasecmp(data + start, "null", 4)) {
         return json_null();
