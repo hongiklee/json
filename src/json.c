@@ -557,7 +557,7 @@ json_t *json_parse(const char *data, int len)
         len--;
     }
     if (start + 1 > len)
-        goto error;
+        return NULL;
 
     if (data[start] == '"') {
         char *value;
@@ -632,15 +632,16 @@ json_t *json_parse(const char *data, int len)
                         json_array_set(root, child);
                     done = i;
                 } else if (data[start] == '{' && ! bracket && ! brace) {
-                    if (key) {
+                    child = json_parse(&data[done], i - done);
+                    if (child) {
+                        if ( ! key) {
+                            json_destroy(child);
+                            goto error;
+                        }
                         //printf("key %s {%.*s}\n", key, i - done, &data[done]);
-                        child = json_parse(&data[done], i - done);
-                        if (child)
-                            json_object_set(root, key, child);
+                        json_object_set(root, key, child);
                         free(key);
                         key = NULL;
-                    } else {
-                        goto error;
                     }
                     done = i;
                 }
@@ -673,6 +674,6 @@ json_t *json_parse(const char *data, int len)
     }
 
 error:
-    fprintf(stderr, "parse error : %.*s\n", len - start, data + start);
+    fprintf(stderr, "parse error : [%.*s]\n", len - start, data + start);
     return NULL;
 }
